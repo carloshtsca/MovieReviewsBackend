@@ -15,3 +15,7 @@ exports.generateRandomByte = () => {
         });
     });
 };
+
+exports.handleNotFound = (req, res, next) => {
+    this.sendError(res, 'Not Found', 404);
+}

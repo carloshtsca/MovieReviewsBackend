@@ -41,6 +41,11 @@ exports.create = async (req, res) => {
     });
 
     res.status(201).json({
+        user: {
+            id: newUser._id,
+            name: newUser.name,
+            email: newUser.email,
+        },
         message: "Please verify your email. OTP has been sent to your email account!",
     });
 }
@@ -58,7 +63,7 @@ exports.verifyEmail = async (req, res) => {
     const token = await EmailVerificationToken.findOne({ owner: userId });
     if (!token) return sendError(res, 'Token not found!');
 
-    const isMatched = token.compareToken(OTP);
+    const isMatched = await token.compareToken(OTP);
     if (!isMatched) return sendError(res, 'Please submit a valid OTP!');
 
     user.isVerified = true;
@@ -75,7 +80,18 @@ exports.verifyEmail = async (req, res) => {
         html: `<h1>Welcome to our app and thanks for choosing us.</h1>`,
     });
 
-    res.json({ message: 'Your email is verified.' });
+    const jwtToken = jwt.sign({ userId: user._id }, process.env.JWT_SECRET);
+
+    res.json({
+        user: {
+            id: user._id,
+            name: user.name,
+            email: user.email,
+            token: jwtToken,
+            isVerified: user.isVerified
+        },
+        message: 'Your email is verified.'
+    });
 }
 
 exports.resendEmailVerificationToken = async (req, res) => {
@@ -133,7 +149,7 @@ exports.forgetPassword = async (req, res) => {
 
     await newPasswordResetToken.save();
 
-    const resetPasswordUrl = `http://localhost:3000/reset-password?token=${token}&id=${user._id}`;
+    const resetPasswordUrl = `http://localhost:3000/auth/reset-password?token=${token}&id=${user._id}`;
 
     var transport = generateMailTransporter();
 
@@ -190,10 +206,9 @@ exports.signIn = async (req, res, next) => {
     const matched = await user.comparePassword(password);
     if (!matched) return sendError(res, 'Email/Password mismatch!');
 
-    const { _id, name } = user;
+    const { _id, name, isVerified } = user;
 
-    const jwtToken = jwt.sign({ userId: user._id }, process.env.JWT_SECRET);
+    const jwtToken = jwt.sign({ userId: _id }, process.env.JWT_SECRET);
 
-    res.json({ user: { id: _id, name, email, token: jwtToken } });
-
+    res.json({ user: { id: _id, name, email, token: jwtToken, isVerified } });
 }
