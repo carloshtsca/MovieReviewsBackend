@@ -14,9 +14,19 @@ exports.createActor = async (req, res) => {
     const { file } = req;
 
     const newActor = new actor({ name, about, gender });
-    const { secure_url, public_id } = await cloudinary.uploader.upload(file.path, { folder: 'movie_reviews_app/actors' });
-    
-    newActor.avatar = { url: secure_url, public_id };
+
+    if (file) {
+        const { secure_url, public_id } = await cloudinary.uploader.upload(file.path, { folder: 'movie_reviews_app/actors' });
+        newActor.avatar = { url: secure_url, public_id };
+    }
+
     await newActor.save();
-    res.status(201).json(newActor);
+
+    res.status(201).json({
+        id: newActor._id,
+        name,
+        about,
+        gender,
+        avatar: newActor.avatar?.url,
+    });
 }
