@@ -20,10 +20,13 @@ exports.createActor = async (req, res) => {
     const newActor = new Actor({ name, about, gender });
 
     if (file) {
-        const { secure_url, public_id } = await cloudinary.uploader.upload(
-            file.path,
-            { folder: storage_route }
-        );
+        const { secure_url, public_id } = await cloudinary.uploader.upload(file.path, {
+            folder: storage_route,
+            gravity: 'face',
+            height: 500,
+            width: 500,
+            crop: 'thumb'
+        });
         newActor.avatar = { url: secure_url, public_id };
     }
 
@@ -60,10 +63,13 @@ exports.updateActor = async (req, res) => {
 
     // upload new avatar if there is one!
     if (file) {
-        const { secure_url, public_id } = await cloudinary.uploader.upload(
-            file.path,
-            { folder: storage_route }
-        );
+        const { secure_url, public_id } = await cloudinary.uploader.upload(file.path, {
+            folder: storage_route,
+            gravity: 'face',
+            height: 500,
+            width: 500,
+            crop: 'thumb'
+        });
         actor.avatar = { url: secure_url, public_id };
     };
 
