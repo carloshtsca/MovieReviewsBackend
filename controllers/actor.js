@@ -1,15 +1,8 @@
 const { isValidObjectId } = require('mongoose');
 const Actor = require('../models/actor');
-const { sendError } = require('../utils/helper');
-const cloudinary = require('cloudinary').v2;
-require('dotenv').config();
-
-cloudinary.config({
-    cloud_name: process.env.CLOUD_NAME,
-    api_key: process.env.CLOUD_API_KEY,
-    api_secret: process.env.CLOUD_API_SECRET,
-    secure: true,
-});
+const { sendError, uploadImageToCloud, formatActor } = require('../utils/helper');
+const cloudinary = require('../cloud');
+const actor = require('../models/actor');
 
 const storage_route = 'movie_reviews_app/actors';
 
@@ -20,25 +13,13 @@ exports.createActor = async (req, res) => {
     const newActor = new Actor({ name, about, gender });
 
     if (file) {
-        const { secure_url, public_id } = await cloudinary.uploader.upload(file.path, {
-            folder: storage_route,
-            gravity: 'face',
-            height: 500,
-            width: 500,
-            crop: 'thumb'
-        });
-        newActor.avatar = { url: secure_url, public_id };
+        const { url, public_id } = await uploadImageToCloud(file.path, storage_route);
+        newActor.avatar = { url, public_id };
     }
 
     await newActor.save();
 
-    res.status(201).json({
-        id: newActor._id,
-        name,
-        about,
-        gender,
-        avatar: newActor.avatar?.url,
-    });
+    res.status(201).json(formatActor(newActor));
 }
 
 exports.updateActor = async (req, res) => {
@@ -63,14 +44,8 @@ exports.updateActor = async (req, res) => {
 
     // upload new avatar if there is one!
     if (file) {
-        const { secure_url, public_id } = await cloudinary.uploader.upload(file.path, {
-            folder: storage_route,
-            gravity: 'face',
-            height: 500,
-            width: 500,
-            crop: 'thumb'
-        });
-        actor.avatar = { url: secure_url, public_id };
+        const { url, public_id } = await uploadImageToCloud(file.path, storage_route);
+        actor.avatar = { url, public_id };
     };
 
     actor.name = name;
@@ -79,13 +54,7 @@ exports.updateActor = async (req, res) => {
 
     await actor.save();
 
-    res.status(201).json({
-        id: actor._id,
-        name,
-        about,
-        gender,
-        avatar: actor.avatar?.url,
-    });
+    res.status(201).json(formatActor(actor));
 }
 
 exports.removeActor = async (req, res) => {
@@ -113,12 +82,18 @@ exports.removeActor = async (req, res) => {
 exports.searchActor = async (req, res) => {
     const { query } = req;
     const result = await Actor.find({ $text: { $search: `"${query.name}"` } });
-    res.json(result);
+
+    const actors = result.map(actor => formatActor(actor));
+
+    res.json(actors);
 }
 
 exports.getLatestActors = async (req, res) => {
     const result = await Actor.find().sort({ createdAt: -1 }).limit(12);
-    res.json(result);
+
+    const actors = result.map(actor => formatActor(actor));
+
+    res.json(actors);
 }
 
 exports.getSingleActor = async (req, res) => {
@@ -128,5 +103,5 @@ exports.getSingleActor = async (req, res) => {
     const actor = await Actor.findById(id);
     if (!actor) return sendError(res, 'Invalid request, actor not found!', 404);
 
-    res.json(actor);
+    res.json(formatActor(actor));
 }
