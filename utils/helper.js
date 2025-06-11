@@ -45,9 +45,9 @@ exports.formatActor = actor => {
 }
 
 exports.parseData = (req, res, next) => {
-    const { trailerInfo, cast, genres, tags, writers } = req.body;
+    const { trailer, cast, genres, tags, writers } = req.body;
 
-    if (trailerInfo) req.body.trailerInfo = JSON.parse(trailerInfo);
+    if (trailer) req.body.trailer = JSON.parse(trailer);
     if (cast) req.body.cast = JSON.parse(cast);
     if (genres) req.body.genres = JSON.parse(genres);
     if (tags) req.body.tags = JSON.parse(tags);

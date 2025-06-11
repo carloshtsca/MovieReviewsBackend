@@ -65,17 +65,17 @@ exports.validateMovie = [
     }),
     check('cast').isArray().withMessage('Cast must be an array of objects!').custom((cast) => {
         for (let c of cast) {
-            if (!isValidObjectId(c.id)) throw Error('Invalid cast id inside cast!');
+            if (!isValidObjectId(c.actor)) throw Error('Invalid cast id inside cast!');
             if (!c.roleAs?.trim()) throw Error('Role as is missing inside cast!');
             if (typeof c.leadActor !== 'boolean') throw Error('Only accepted boolean value inside leadActor inside cast!');
         };
 
         return true;
     }),
-    check('trailerInfo').isObject().withMessage('trailerInfo must be object with url and public_id').custom(({ url, public_id }) => {
+    check('trailer').isObject().withMessage('Trailer must be object with url and public_id').custom(({ url, public_id }) => {
         try {
             const result = new URL(url);
-            if (result.protocol.includes('http')) throw Error('Trailer url is invalid!');
+            if (!result.protocol.includes('http')) throw Error('Trailer url is invalid!');
 
             const arr = url.split('/');
             const publicId = arr[arr.length - 1].split('.')[0];
