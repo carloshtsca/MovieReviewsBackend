@@ -22,7 +22,8 @@ router.get('/is-auth', isAuth, (req, res) => {
             id: user._id,
             name: user.name,
             email: user.email,
-            isVerified: user.isVerified
+            isVerified: user.isVerified,
+            role: user.role,
         }
     });
 });
