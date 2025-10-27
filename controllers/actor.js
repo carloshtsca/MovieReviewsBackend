@@ -81,7 +81,8 @@ exports.removeActor = async (req, res) => {
 
 exports.searchActor = async (req, res) => {
     const { query } = req;
-    const result = await Actor.find({ $text: { $search: `"${query.name}"` } });
+    // const result = await Actor.find({ $text: { $search: `"${query.name}"` } });
+    const result = await Actor.find({ name: { $regex: query.name, $options: 'i' } });
 
     const actors = result.map(actor => formatActor(actor));
 
