@@ -25,7 +25,7 @@ router.patch(
     uploadImage.single('poster'),
     parseData,
     validateMovie,
-    validateTrailer,
+    // validateTrailer,
     validate,
     updateMovie
 );
