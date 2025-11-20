@@ -1,6 +1,6 @@
 const cloudinary = require('../cloud');
 const storage_path = require('../cloud/path');
-const { sendError } = require('../utils/helper');
+const { sendError, formatActor } = require('../utils/helper');
 const Movie = require('../models/movie');
 const { isValidObjectId } = require('mongoose');
 
@@ -159,12 +159,13 @@ exports.updateMovieWithoutPoster = async (req, res) => {
 
 };
 
-exports.updateMovieWithPoster = async (req, res) => {
+exports.updateMovie = async (req, res) => {
     const { movieId } = req.params;
+    const { file } = req;
 
     if (!isValidObjectId(movieId)) return sendError(res, 'Invalid Movie ID!');
 
-    if (!req.file) return sendError(res, 'Movie poster is missing!');
+    // if (!req.file) return sendError(res, 'Movie poster is missing!');
 
     const movie = await Movie.findById(movieId);
     if (!movie) return sendError(res, 'Movie Not Found!', 404);
@@ -192,7 +193,6 @@ exports.updateMovieWithPoster = async (req, res) => {
     movie.type = type;
     movie.genres = genres;
     movie.cast = cast;
-    movie.trailer = trailer;
     movie.language = language;
 
     if (director) {
@@ -209,48 +209,59 @@ exports.updateMovieWithPoster = async (req, res) => {
     }
 
     // update poster.
-    // removing poster from cloud if there is any.
-    const posterID = movie.poster?.public_id;
-    if (posterID) {
-        const { result } = await cloudinary.uploader.destroy(posterID);
-        if (result !== 'ok') {
-            return sendError(res, 'Could not update poster at the moment!');
+    if (file) {
+        // removing poster from cloud if there is any.
+        const posterID = movie.poster?.public_id;
+        if (posterID) {
+            const { result } = await cloudinary.uploader.destroy(posterID);
+            if (result !== 'ok') {
+                return sendError(res, 'Could not update poster at the moment!');
+            }
         }
-    }
 
-    // uploading poster.
-    const { secure_url: url, public_id, responsive_breakpoints } = await cloudinary.uploader.upload(
-        req.file.path,
-        {
-            folder: storage_path('posters'),
-            transformation: {
-                width: 1280,
-                height: 720,
+        // uploading poster.
+        const { secure_url: url, public_id, responsive_breakpoints } = await cloudinary.uploader.upload(
+            req.file.path,
+            {
+                folder: storage_path('posters'),
+                transformation: {
+                    width: 1280,
+                    height: 720,
+                },
+                responsive_breakpoints: {
+                    create_derived: true,
+                    max_width: 640,
+                    max_images: 3,
+                },
             },
-            responsive_breakpoints: {
-                create_derived: true,
-                max_width: 640,
-                max_images: 3,
-            },
-        },
-    );
+        );
 
-    const finalPoster = { url, public_id, responsive: [] };
+        const finalPoster = { url, public_id, responsive: [] };
 
-    const { breakpoints } = responsive_breakpoints[0];
+        const { breakpoints } = responsive_breakpoints[0];
 
-    if (breakpoints.length) {
-        for (let imgObj of breakpoints) {
-            const { secure_url } = imgObj;
-            finalPoster.responsive.push(secure_url);
+        if (breakpoints.length) {
+            for (let imgObj of breakpoints) {
+                const { secure_url } = imgObj;
+                finalPoster.responsive.push(secure_url);
+            }
         }
-    }
 
-    movie.poster = finalPoster;
+        movie.poster = finalPoster;
+    }
 
     await movie.save();
 
-    res.json({ message: 'Movie is updated', movie });
+    res.json({
+        message: 'Movie is updated',
+        movie: {
+            id: movie._id,
+            title: movie.title,
+            poster: movie.poster?.url,
+            genres: movie.genres,
+            status: movie.status,
+        }
+    });
 
 };
 
@@ -301,4 +312,37 @@ exports.getMovies = async (req, res) => {
     }));
 
     res.json({ movies: results });
+};
+
+exports.getMovieForUpdate = async (req, res) => {
+    const { movieId } = req.params;
+
+    if (!isValidObjectId(movieId)) return sendError(res, 'Id is invalid!');
+
+    const movie = await Movie.findById(movieId).populate("director writers cast.actor");
+
+    res.json({
+        movie: {
+            id: movie.id,
+            title: movie.title,
+            storyLine: movie.storyLine,
+            poster: movie.poster?.url,
+            releaseDate: movie.releaseDate,
+            status: movie.status,
+            type: movie.type,
+            language: movie.language,
+            genres: movie.genres,
+            tags: movie.tags,
+            director: formatActor(movie.director),
+            writers: movie.writers.map(w => formatActor(w)),
+            cast: movie.cast.map(c => {
+                return {
+                    id: c.id,
+                    profile: formatActor(c.actor),
+                    roleAs: c.roleAs,
+                    leadActor: c.leadActor
+                }
+            }),
+        }
+    });
 };

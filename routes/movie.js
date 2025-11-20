@@ -3,32 +3,34 @@ const router = express.Router();
 
 const { isAuth, isAdmin } = require('../middlewares/auth');
 const { uploadVideo, uploadImage } = require('../middlewares/multer');
-const { uploadTrailer, createMovie, updateMovieWithoutPoster, updateMovieWithPoster, removeMovie, getMovies } = require('../controllers/movie');
+const { uploadTrailer, createMovie, removeMovie, getMovies, getMovieForUpdate, updateMovie } = require('../controllers/movie');
 const { parseData } = require('../utils/helper');
-const { validateMovie, validate } = require('../middlewares/validator');
+const { validateMovie, validate, validateTrailer } = require('../middlewares/validator');
 
 router.post('/upload-trailer', isAuth, isAdmin, uploadVideo.single('video'), uploadTrailer);
-router.post('/create', isAuth, isAdmin, uploadImage.single('poster'), parseData, validateMovie, validate, createMovie);
+router.post('/create', isAuth, isAdmin, uploadImage.single('poster'), parseData, validateMovie, validateTrailer, validate, createMovie);
+// router.patch(
+//     '/update-movie-without-poster/:movieId',
+//     isAuth,
+//     isAdmin,
+//     // parseData, 
+//     validateMovie,
+//     validate,
+//     updateMovieWithoutPoster
+// );
 router.patch(
-    '/update-movie-without-poster/:movieId',
-    isAuth,
-    isAdmin,
-    // parseData, 
-    validateMovie,
-    validate,
-    updateMovieWithoutPoster
-);
-router.patch(
-    '/update-movie-with-poster/:movieId',
+    '/update/:movieId',
     isAuth,
     isAdmin,
     uploadImage.single('poster'),
     parseData,
     validateMovie,
+    // validateTrailer,
     validate,
-    updateMovieWithPoster
+    updateMovie
 );
 router.delete('/:movieId', isAuth, isAdmin, removeMovie);
 router.get('/movies', isAuth, isAdmin, getMovies);
+router.get('/for-update/:movieId', isAuth, isAdmin, getMovieForUpdate);
 
 module.exports = router;
