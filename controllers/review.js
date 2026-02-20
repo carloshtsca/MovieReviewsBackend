@@ -13,11 +13,26 @@ exports.addReview = async (req, res) => {
     const movie = await Movie.findOne({ _id: movieId, status: 'public' });
     if (!movie) return sendError(res, 'Movie not found!', 404);
 
-    const isAlreadyReviewed = await Review.findOne({ 
-        owner: userId, 
-        parentMovie: movie._id 
+    const isAlreadyReviewed = await Review.findOne({
+        owner: userId,
+        parentMovie: movie._id
     });
     if (isAlreadyReviewed) return sendError(res, 'Invalid request review is already their!');
 
     // create and update review
+    const newReview = new Review({
+        owner: userId,
+        parentMovie: movie._id,
+        content,
+        rating
+    });
+
+    // updating review for movie.
+    movie.reviews.push(newReview._id);
+    await movie.save();
+
+    // saving new review
+    await newReview.save();
+
+    res.json({ message: 'Your review has been added.' });
 };
