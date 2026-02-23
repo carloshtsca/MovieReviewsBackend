@@ -54,3 +54,25 @@ exports.updateReview = async (req, res) => {
 
     res.json({ message: 'Your review has been updated.' });
 };
+
+exports.removeReview = async (req, res) => {
+    const { reviewId } = req.params;
+    const userId = req.user._id;
+
+    if (!isValidObjectId(reviewId)) return sendError(res, 'Invalid review ID!');
+
+    const review = await Review.findOne({ owner: userId, _id: reviewId });
+    if (!review) return sendError(res, 'Invalid request, review not found!');
+
+    // POrque não remove o id das reviews não funciona!
+    const movie = await Movie.findById(review.parentMovie).select('reviews');
+    movie.reviews = movie.reviews = movie.reviews.filter(
+        rId => rId.toString() !== reviewId.toString()
+    );
+
+    await Review.findByIdAndDelete(reviewId);
+
+    await movie.save();
+
+    res.json({ message: 'Review removed successfully.' });
+};
