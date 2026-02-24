@@ -385,3 +385,13 @@ exports.getLatestUploads = async (req, res) => {
 
     res.json({ movies });
 };
+
+exports.getSingleMovie = async (req, res) => {
+    const { movieId } = req.params;
+
+    if (!isValidObjectId(movieId)) return sendError(res, 'Movie id is not valid!');
+
+    const movie = await Movie.findById(movieId).populate('director writers cast.actor');
+
+    res.json({ movie });
+};
