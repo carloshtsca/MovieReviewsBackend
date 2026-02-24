@@ -353,13 +353,35 @@ exports.searchMovies = async (req, res) => {
     if (!title.trim()) return sendError(res, 'Invalid request!');
 
     const movies = await Movie.find({ title: { $regex: title, $options: 'i' } });
-    res.json({ results: movies.map(m => {
+    res.json({
+        results: movies.map(m => {
+            return {
+                id: m._id,
+                title: m.title,
+                poster: m.poster?.url,
+                genres: m.genres,
+                status: m.status
+            }
+        })
+    });
+};
+
+exports.getLatestUploads = async (req, res) => {
+    const { limit = 5 } = req.query;
+
+    const results = await Movie.find({ status: 'public' })
+        .sort('-createdAt')
+        .limit(parseInt(limit));
+
+    const movies = results.map(m => {
         return {
             id: m._id,
             title: m.title,
+            storyLine: m.storyLine,
             poster: m.poster?.url,
-            genres: m.genres,
-            status: m.status
-        }
-    })});
+            trailer: m.trailer?.url,
+        };
+    });
+
+    res.json({ movies });
 };
