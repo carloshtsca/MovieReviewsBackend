@@ -393,5 +393,52 @@ exports.getSingleMovie = async (req, res) => {
 
     const movie = await Movie.findById(movieId).populate('director writers cast.actor');
 
-    res.json({ movie });
+    const {
+        _id: id,
+        title,
+        storyLine,
+        cast,
+        writers,
+        director,
+        releaseDate,
+        genres,
+        tags,
+        language,
+        poster,
+        trailer,
+        type
+    } = movie;
+
+    res.json({
+        movie: {
+            id,
+            title,
+            storyLine,
+            releaseDate,
+            genres,
+            tags,
+            language,
+            type,
+            poster: poster?.url,
+            trailer: trailer?.url,
+            cast: cast.map((c) => ({
+                id: c._id,
+                profile: {
+                    id: c.actor._id,
+                    name: c.actor.name,
+                    avatar: c.actor?.avatar?.url,
+                },
+                leadActor: c.leadActor,
+                roleAs: c.roleAs,
+            })),
+            writers: writers.map(w => ({
+                id: w._id,
+                name: w.name
+            })),
+            director: {
+                id: director._id,
+                name: director.name,
+            },
+        }
+    });
 };
