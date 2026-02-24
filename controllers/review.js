@@ -76,3 +76,19 @@ exports.removeReview = async (req, res) => {
 
     res.json({ message: 'Review removed successfully.' });
 };
+
+exports.getReviewsByMovie = async (req, res) => {
+    const { movieId } = req.params;
+
+    if (!isValidObjectId(movieId)) return sendError(res, 'Invalid movie ID!');
+
+    const movie = await Movie.findById(movieId).populate({
+        path: 'reviews',
+        populate: {
+            path: 'owner',
+            select: 'name',
+        },
+    }).select('reviews');
+
+    res.json(movie.reviews);
+};
