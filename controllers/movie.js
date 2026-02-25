@@ -457,3 +457,7 @@ exports.getSingleMovie = async (req, res) => {
         },
     });
 };
+
+exports.getRelatedMovies = async (req, res) => {
+
+}
