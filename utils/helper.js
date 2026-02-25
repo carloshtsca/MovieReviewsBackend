@@ -82,3 +82,31 @@ exports.averageRatingPipeline = (movieId) => {
         },
     ];
 };
+
+exports.relatedMovieAggregation = (movie) => {
+    return [
+        {
+            $lookup: {
+                from: 'Movie',
+                localField: 'tags',
+                foreignField: '_id',
+                as: 'relatedMovies',
+            },
+        },
+        {
+            $match: {
+                tags: { $in: [...movie.tags] },
+                _id: { $ne: movie._id }
+            },
+        },
+        {
+            $project: {
+                title: 1,
+                poster: '$poster.url',
+            },
+        },
+        {
+            $limit: 5,
+        },
+    ]
+}
