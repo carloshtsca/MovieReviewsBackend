@@ -397,9 +397,15 @@ exports.getSingleMovie = async (req, res) => {
 
     const movie = await Movie.findById(movieId).populate('director writers cast.actor');
 
-    const reviews = await Review.aggregate(averageRatingPipeline(movie._id));
+    const [ aggregatedResponse ] = await Review.aggregate(averageRatingPipeline(movie._id));
 
-    console.log(reviews);
+    const reviews = {};
+
+    if (aggregatedResponse) {
+        const { ratingAvg, reviewCount } = aggregatedResponse;
+        reviews.ratingAvg = parseFloat(ratingAvg).toFixed(1);
+        reviews.reviewCount = reviewCount;
+    };
 
     const {
         _id: id,
@@ -447,6 +453,7 @@ exports.getSingleMovie = async (req, res) => {
                 id: director._id,
                 name: director.name,
             },
-        }
+            reviews: { ...reviews },
+        },
     });
 };
