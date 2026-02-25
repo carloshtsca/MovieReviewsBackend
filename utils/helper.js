@@ -55,3 +55,30 @@ exports.parseData = (req, res, next) => {
 
     next();
 };
+
+exports.averageRatingPipeline = (movieId) => {
+    return [
+        {
+            $lookup: {
+                from: "Review",
+                localField: "rating",
+                foreignField: '_id',
+                as: "avgRat",
+            },
+        },
+        {
+            $match: { parentMovie: movieId },
+        },
+        {
+            $group: {
+                _id: null,
+                ratingAvg: {
+                    $avg: '$rating',
+                },
+                reviewCount: {
+                    $sum: 1
+                }
+            },
+        },
+    ];
+};
