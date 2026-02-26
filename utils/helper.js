@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const cloudinary = require('../cloud');
+const Review = require('../models/review');
 
 exports.sendError = (res, error, statusCode = 401) => {
     res.status(statusCode).json({ error });
@@ -54,4 +55,110 @@ exports.parseData = (req, res, next) => {
     if (writers) req.body.writers = JSON.parse(writers);
 
     next();
+};
+
+exports.averageRatingPipeline = (movieId) => {
+    return [
+        {
+            $lookup: {
+                from: "Review",
+                localField: "rating",
+                foreignField: '_id',
+                as: "avgRat",
+            },
+        },
+        {
+            $match: { parentMovie: movieId },
+        },
+        {
+            $group: {
+                _id: null,
+                ratingAvg: {
+                    $avg: '$rating',
+                },
+                reviewCount: {
+                    $sum: 1
+                }
+            },
+        },
+    ];
+};
+
+exports.relatedMovieAggregation = (movie) => {
+    return [
+        {
+            $lookup: {
+                from: 'Movie',
+                localField: 'tags',
+                foreignField: '_id',
+                as: 'relatedMovies',
+            },
+        },
+        {
+            $match: {
+                tags: { $in: [...movie.tags] },
+                _id: { $ne: movie._id }
+            },
+        },
+        {
+            $project: {
+                title: 1,
+                poster: '$poster.url',
+            },
+        },
+        {
+            $limit: 5,
+        },
+    ]
+}
+
+exports.getAverageRatings = async (movieId) => {
+    const [aggregatedResponse] = await Review.aggregate(
+        this.averageRatingPipeline(movieId)
+    );
+
+    const reviews = {};
+
+    if (aggregatedResponse) {
+        const { ratingAvg, reviewCount } = aggregatedResponse;
+        reviews.ratingAvg = parseFloat(ratingAvg).toFixed(1);
+        reviews.reviewCount = reviewCount;
+    };
+
+    return reviews;
+};
+
+exports.topRatedMoviesPipeline = (type) => {
+    return [
+        {
+            $lookup: {
+                from: 'Movie',
+                localField: 'reviews',
+                foreignField: '_id',
+                as: 'topRated',
+            },
+        },
+        {
+            $match: {
+                reviews: { $exists: true },
+                status: { $eq: 'public' },
+                type: { $eq: type },
+            },
+        },
+        {
+            $project: {
+                title: 1,
+                poster: '$poster.url',
+                reviewCount: { $size: '$reviews' }
+            },
+        },
+        {
+            $sort: {
+                reviewCount: -1,
+            },
+        },
+        {
+            $limit: 5
+        },
+    ];
 };
