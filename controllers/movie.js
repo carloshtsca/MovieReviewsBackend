@@ -1,6 +1,6 @@
 const cloudinary = require('../cloud');
 const storage_path = require('../cloud/path');
-const { sendError, formatActor, averageRatingPipeline, relatedMovieAggregation, getAverageRatings } = require('../utils/helper');
+const { sendError, formatActor, averageRatingPipeline, relatedMovieAggregation, getAverageRatings, topRatedMoviesPipeline } = require('../utils/helper');
 const Movie = require('../models/movie');
 const Review = require('../models/review');
 const { isValidObjectId } = require('mongoose');
@@ -480,38 +480,20 @@ exports.getRelatedMovies = async (req, res) => {
 exports.getTopRatedMovies = async (req, res) => {
     const { type = 'Film' } = req.query;
 
-    const movies = await Movie.aggregate([
-        {
-            $lookup: {
-                from: 'Movie',
-                localField: 'reviews',
-                foreignField: '_id',
-                as: 'topRated',
-            },
-        },
-        {
-            $match: {
-                reviews: { $exists: true },
-                status: { $eq: 'public' },
-                type: { $eq: type },
-            },
-        },
-        {
-            $project: {
-                title: 1,
-                poster: '$poster.url',
-                reviewCount: { $size: '$reviews' }
-            },
-        },
-        {
-            $sort: {
-                reviewCount: -1,
-            },
-        },
-        {
-            $limit: 5
-        },
-    ]);
+    const movies = await Movie.aggregate(topRatedMoviesPipeline(type));
 
-    res.json(movies);
+    const mapMovies = async (m) => {
+        const reviews = await getAverageRatings(m._id);
+
+        return {
+            id: m._id,
+            title: m.title,
+            poster: m.poster,
+            reviews: { ...reviews }
+        }
+    }
+
+    const topRatedMovies = await Promise.all(movies.map(mapMovies));
+
+    res.json({ movies: topRatedMovies });
 };

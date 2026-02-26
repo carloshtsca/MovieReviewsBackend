@@ -127,3 +127,38 @@ exports.getAverageRatings = async (movieId) => {
 
     return reviews;
 };
+
+exports.topRatedMoviesPipeline = (type) => {
+    return [
+        {
+            $lookup: {
+                from: 'Movie',
+                localField: 'reviews',
+                foreignField: '_id',
+                as: 'topRated',
+            },
+        },
+        {
+            $match: {
+                reviews: { $exists: true },
+                status: { $eq: 'public' },
+                type: { $eq: type },
+            },
+        },
+        {
+            $project: {
+                title: 1,
+                poster: '$poster.url',
+                reviewCount: { $size: '$reviews' }
+            },
+        },
+        {
+            $sort: {
+                reviewCount: -1,
+            },
+        },
+        {
+            $limit: 5
+        },
+    ];
+};
