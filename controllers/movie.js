@@ -1,6 +1,6 @@
 const cloudinary = require('../cloud');
 const storage_path = require('../cloud/path');
-const { sendError, formatActor, averageRatingPipeline, relatedMovieAggregation } = require('../utils/helper');
+const { sendError, formatActor, averageRatingPipeline, relatedMovieAggregation, getAverageRatings } = require('../utils/helper');
 const Movie = require('../models/movie');
 const Review = require('../models/review');
 const { isValidObjectId } = require('mongoose');
@@ -397,15 +397,7 @@ exports.getSingleMovie = async (req, res) => {
 
     const movie = await Movie.findById(movieId).populate('director writers cast.actor');
 
-    const [aggregatedResponse] = await Review.aggregate(averageRatingPipeline(movie._id));
-
-    const reviews = {};
-
-    if (aggregatedResponse) {
-        const { ratingAvg, reviewCount } = aggregatedResponse;
-        reviews.ratingAvg = parseFloat(ratingAvg).toFixed(1);
-        reviews.reviewCount = reviewCount;
-    };
+    const reviews = await getAverageRatings(movie._id);
 
     const {
         _id: id,
@@ -467,5 +459,16 @@ exports.getRelatedMovies = async (req, res) => {
 
     const movies = await Movie.aggregate(relatedMovieAggregation(movie));
 
-    res.json({ movies });
+    const relatedMovies =  movies.map(async (m) => {
+        const reviews = await getAverageRatings(m._id);
+
+        return {
+            id: m._id,
+            title: m.title,
+            poster: m.poster,
+            reviews: { ...reviews },
+        }
+    });
+
+    res.json({ relatedMovies });
 };
