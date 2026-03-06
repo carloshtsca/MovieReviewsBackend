@@ -474,7 +474,7 @@ exports.getRelatedMovies = async (req, res) => {
         movies.map(mapMovies)
     );
 
-    res.json({ relatedMovies });
+    res.json({ movies: relatedMovies });
 };
 
 exports.getTopRatedMovies = async (req, res) => {
